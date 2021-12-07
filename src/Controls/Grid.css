@@ -1,0 +1,42 @@
+.Grid {
+    background: rgb(100, 203, 237);
+    background: linear-gradient(90deg, rgba(100, 203, 237, 1) 0%, rgba(69, 102, 187, 1) 35%, rgba(100, 149, 237, 1) 100%);
+}
+
+.Grid button {
+    background   : rgb(247, 214, 157);
+    background   : linear-gradient(90deg, rgba(247, 214, 157, 1) 0%, rgba(236, 200, 191, 1) 35%, rgba(222, 119, 94, 1) 100%);
+    color        : rgb(61, 71, 43);
+    font-family  : 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-variant : small-caps;
+    font-size    : 14pt;
+    display      : block;
+    float        : left;
+    width        : 120px;
+    text-align   : left;
+    height       : 40px;
+    border       : none;
+    border-radius: 20px;
+    margin       : 4px;
+    text-align   : center;
+}
+
+.Grid button:hover {
+    background     : rgb(242, 173, 109);
+    background     : linear-gradient(90deg, rgba(242, 173, 109, 1) 0%, rgba(255, 246, 89, 1) 62%, rgba(233, 102, 69, 1) 100%);
+    color          : navy;
+    font-weight    : bold;
+    text-decoration: underline;
+    stroke-width   : 2px;
+}
+
+.Grid Canvas {
+    /* width  : calc(100%-220px); */
+    display: block;
+}
+
+.GridBtns {
+    float  : left;
+    width  : 100%;
+    display: block;
+}
