@@ -1,0 +1,22 @@
+{
+  "files": {
+    "main.css": "/cmgol/static/css/main.61c9fc7c.chunk.css",
+    "main.js": "/cmgol/static/js/main.da9794a0.chunk.js",
+    "main.js.map": "/cmgol/static/js/main.da9794a0.chunk.js.map",
+    "runtime-main.js": "/cmgol/static/js/runtime-main.751ba5ac.js",
+    "runtime-main.js.map": "/cmgol/static/js/runtime-main.751ba5ac.js.map",
+    "static/js/2.e398b667.chunk.js": "/cmgol/static/js/2.e398b667.chunk.js",
+    "static/js/2.e398b667.chunk.js.map": "/cmgol/static/js/2.e398b667.chunk.js.map",
+    "static/js/3.4c6a817f.chunk.js": "/cmgol/static/js/3.4c6a817f.chunk.js",
+    "static/js/3.4c6a817f.chunk.js.map": "/cmgol/static/js/3.4c6a817f.chunk.js.map",
+    "index.html": "/cmgol/index.html",
+    "static/css/main.61c9fc7c.chunk.css.map": "/cmgol/static/css/main.61c9fc7c.chunk.css.map",
+    "static/js/2.e398b667.chunk.js.LICENSE.txt": "/cmgol/static/js/2.e398b667.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.751ba5ac.js",
+    "static/js/2.e398b667.chunk.js",
+    "static/css/main.61c9fc7c.chunk.css",
+    "static/js/main.da9794a0.chunk.js"
+  ]
+}
