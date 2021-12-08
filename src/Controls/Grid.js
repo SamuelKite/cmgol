@@ -39,7 +39,7 @@ export class Grid extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            dim: 16,
+            dim: 28,
             cells: [],
             next: [],
             p5: null,
@@ -47,7 +47,7 @@ export class Grid extends React.Component {
             coloringFunction: this.colorInCells,
             filterName: "All",
             steps: 1,
-            gDecay: false
+            gDecay: true
         };
 
         this.draw = this.draw.bind(this);
@@ -64,6 +64,7 @@ export class Grid extends React.Component {
         this.colorInGreen = this.colorInGreen.bind(this);
         this.colorInBlue = this.colorInBlue.bind(this);
         this.colorInRed = this.colorInRed.bind(this);
+        this.colorInWhite = this.colorInWhite.bind(this);
 
         this.state.coloringFunction = this.state.coloringFunction.bind(this);
 
@@ -73,21 +74,22 @@ export class Grid extends React.Component {
     }
 
     componentDidUpdate(prevProps, prevState, snapshot) {
-        if (prevState.coloringFunction !== this.state.coloringFunction ||
-            prevState.dim !== this.state.dim) {
+        if (prevState.dim !== this.state.dim) {
             this.init(this.state.p5);
+            this.doDrawing(this.state.p5, this.state.coloringFunction);
+        } else if (prevState.coloringFunction !== this.state.coloringFunction) {
             this.doDrawing(this.state.p5, this.state.coloringFunction);
         }
     }
 
     toggleCellSize() {
         const sizes = { 16: 20, 20: 24, 24: 28, 28: 4, 4: 8, 8: 12, 12: 16 }
-        this.setState({ dim: sizes[this.state.dim] });
+        this.setState({ dim: sizes[this.state.dim] ?? 28 });
     }
 
     toggleSteps() {
         const totalIncrements = { 1: 2, 2: 3, 3: 4, 4: 5, 5: 1 }
-        this.setState({ steps: totalIncrements[this.state.steps] });
+        this.setState({ steps: totalIncrements[this.state.steps] ?? 1 });
     }
 
     init(p5) {
@@ -229,13 +231,22 @@ export class Grid extends React.Component {
             }
         })
     }
+    colorInWhite(p5) {
+        this.colorAnyCell(p5, (c) => {
+            if (Math.abs(c.R - c.G) < 2 && c.R == c.B && c.R !== 0) {
+                p5.fill(c.R * 255, c.G * 255, c.B * 255);
+            } else {
+                p5.fill(0);
+            }
+        });
+    }
 
     pause() {
         this.setState({ paused: !this.state.paused })
     }
 
-    toggleGDecay(){
-        this.setState({gDecay:!this.state.gDecay});
+    toggleGDecay() {
+        this.setState({ gDecay: !this.state.gDecay });
     }
 
     swapFilter(clickArgs) {
@@ -250,7 +261,11 @@ export class Grid extends React.Component {
         } else if (this.state.filterName === "Red") {
             newColoringFunction = this.colorInGreen;
             newLabel = "Green";
-        } else {
+        } else if (this.state.filterName === "Green") {
+            newColoringFunction = this.colorInWhite;
+            newLabel = "Gray";
+        }
+        else {
             newColoringFunction = this.colorInCells;
             newLabel = "All";
         }
@@ -264,7 +279,7 @@ export class Grid extends React.Component {
     style={{ display: 'inline-block', float: 'right' }}
     */
     render() {
-        const { paused, filterName, dim, steps, p5, next, coloringFunction, cells, gDecay} = this.state
+        const { paused, filterName, dim, steps, p5, next, coloringFunction, cells, gDecay } = this.state
         return (
             <div className="Grid">
                 <div className="GridBtns">
@@ -274,7 +289,7 @@ export class Grid extends React.Component {
                     <button onClick={this.toggleCellSize}>cell size: {dim}</button>
                     <button onClick={this.toggleSteps}>steps: {steps}</button>
                     <button onClick={() => this.doDrawing(p5, coloringFunction)}>Increment</button>
-                    <button onClick={this.toggleGDecay}>{gDecay?"G Decays":"G Doesn't Decay"}</button>
+                    <button onClick={this.toggleGDecay}>{gDecay ? "G Decays" : "G Doesn't Decay"}</button>
                 </div>
 
                 <Canvas init={this.init} dim={dim} rows={cells} next={next} draw={this.draw} />
