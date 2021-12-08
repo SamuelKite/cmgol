@@ -21,6 +21,18 @@ export class GridCell {
         this.B = B
         this.steps = steps
     }
+
+    increment(color) {
+        if (this.hasOwnProperty(color) && this[color] < this.steps) {
+            this[color] += 1;
+        }
+    }
+
+    decrement(color) {
+        if (this.hasOwnProperty(color) && this[color] > 0) {
+            this[color] -= 1;
+        }
+    }
 }
 
 export class Grid extends React.Component {
@@ -31,20 +43,52 @@ export class Grid extends React.Component {
             cells: [],
             next: [],
             p5: null,
-            paused: false
+            paused: false,
+            coloringFunction: this.colorInCells,
+            filterName: "All",
+            steps: 1,
+            gDecay: false
         };
 
         this.draw = this.draw.bind(this);
+        this.doDrawing = this.doDrawing.bind(this);
         this.init = this.init.bind(this);
         this.generate = this.generate.bind(this);
         this.pause = this.pause.bind(this);
+        this.swapFilter = this.swapFilter.bind(this);
+        this.toggleCellSize = this.toggleCellSize.bind(this);
+        this.toggleSteps = this.toggleSteps.bind(this);
+        this.toggleGDecay = this.toggleGDecay.bind(this);
+
         this.colorInCells = this.colorInCells.bind(this);
+        this.colorInGreen = this.colorInGreen.bind(this);
+        this.colorInBlue = this.colorInBlue.bind(this);
+        this.colorInRed = this.colorInRed.bind(this);
+
+        this.state.coloringFunction = this.state.coloringFunction.bind(this);
+
     }
 
     componentDidMount() {
     }
 
-    //componentDidUpdate
+    componentDidUpdate(prevProps, prevState, snapshot) {
+        if (prevState.coloringFunction !== this.state.coloringFunction ||
+            prevState.dim !== this.state.dim) {
+            this.init(this.state.p5);
+            this.doDrawing(this.state.p5, this.state.coloringFunction);
+        }
+    }
+
+    toggleCellSize() {
+        const sizes = { 16: 20, 20: 24, 24: 28, 28: 4, 4: 8, 8: 12, 12: 16 }
+        this.setState({ dim: sizes[this.state.dim] });
+    }
+
+    toggleSteps() {
+        const totalIncrements = { 1: 2, 2: 3, 3: 4, 4: 5, 5: 1 }
+        this.setState({ steps: totalIncrements[this.state.steps] });
+    }
 
     init(p5) {
         if (this.state.p5 != null) {
@@ -57,12 +101,12 @@ export class Grid extends React.Component {
         for (let i = 0; i < rows; i++) {
             for (let j = 0; j < cols; j++) {
                 if (i == 0 || j == 0 || i == rows - 1 || j == cols - 1) {
-                    newCells[i][j] = new GridCell();
+                    newCells[i][j] = new GridCell(0, 0, 0, this.state.steps);
                 }
                 else {
-                    newCells[i][j] = new GridCell(Math.floor(Math.random() * 2), 0, Math.floor(Math.random() * 2), 1);
+                    newCells[i][j] = new GridCell(Math.floor(Math.random() * 2), 0, Math.floor(Math.random() * 2), this.state.steps);
                 }
-                newNext[i][j] = new GridCell();
+                newNext[i][j] = new GridCell(0, 0, 0, this.state.steps);
             }
         }
 
@@ -70,44 +114,52 @@ export class Grid extends React.Component {
 
         p5.background(255);
         this.generate(p5);
-        this.colorInCells(p5);
+        this.doDrawing(p5, this.state.coloringFunction);
     }
 
     generate(p5) {
         if (this.state.cells.length > 0) {
             for (let y = 1; y < this.state.cells.length - 1; y++) {
                 for (let x = 1; x < this.state.cells[y].length - 1; x++) {
+                    let cell = this.state.cells[y][x];
                     // count neighbors
-                    let neighbors = new GridCell;
+                    let neighbors = { R: 0, G: 0, B: 0 };
                     for (let i = -1; i <= 1; i++) {
                         for (let j = -1; j <= 1; j++) {
+                            let neighborCell = this.state.cells[y + i][x + j];
+                            if (cell === neighborCell) {
+                                continue;
+                            }
+
                             ["R", "G", "B"].forEach(element => {
-                                neighbors[element] += this.state.cells[y + i][x + j][element]
+                                neighbors[element] += neighborCell[element] > 0 ? 1 : 0;
                             });
                         }
                     }
-                    // remove self from neighbor count
-                    ["R", "G", "B"].forEach(element => {
-                        neighbors[element] -= this.state.cells[y][x][element]
-                    });
                     // Conflict step--R+B = G, G=R||B
-                    if (this.state.cells[y][x].R == this.state.cells[y][x].B && this.state.cells[y][x].R == 1) {
-                        this.state.cells[y][x].G = 1;
-                    } else if (this.state.cells[y][x].G == 1 && this.state.cells[y][x].R == 0 && this.state.cells[y][x].B == 0) {
+
+                    if (cell.B > 0 && cell.R > 0) {
+                        cell.increment("G");
+                    } else if (cell.G > 0 &&
+                        cell.R < cell.G &&
+                        cell.B < cell.G) {
                         if (Math.random() > .5) {
-                            this.state.cells[y][x].B = 1;
+                            cell.increment("B");
                         } else {
-                            this.state.cells[y][x].R = 1;
+                            cell.increment("R");
                         }
                         // Optional Remove Green step
-                        //this.state.cells[y][x].G = 0;
+                        if (this.state.gDecay === true) {
+                            cell.decrement("G");
+                        }
                     }
                     // Game of Life rules
+                    let nextCell = this.state.next[y][x];
                     ["R", "G", "B"].forEach(element => {
-                        if ((this.state.cells[y][x][element] == 1) && (neighbors[element] < 2)) this.state.next[y][x][element] = 0;
-                        else if ((this.state.cells[y][x][element] == 1) && neighbors[element] > 3) this.state.next[y][x][element] = 0;
-                        else if ((this.state.cells[y][x][element] == 0) && neighbors[element] == 3) this.state.next[y][x][element] = 1;
-                        else this.state.next[y][x][element] = this.state.cells[y][x][element];
+                        if ((cell[element] > 0) && (neighbors[element] < 2)) nextCell.decrement(element);
+                        else if ((cell[element] > 0) && neighbors[element] > 3) nextCell.decrement(element);
+                        else if ((cell[element] == 0) && neighbors[element] == 3) nextCell.increment(element);
+                        else nextCell[element] = cell[element];
                     });
                 }
             }
@@ -120,32 +172,90 @@ export class Grid extends React.Component {
 
     draw(p5) {
         if (this.state.paused) return;
+        this.doDrawing(p5, this.state.coloringFunction);
+    }
 
-        if (this.state.cells?.length > 0) {
-            p5.background(255);
-            this.generate(p5);
-            this.colorInCells(p5);
+    doDrawing(p5, coloringFunction) {
+        if (p5) {
+            if (this.state.cells?.length > 0) {
+                p5.background(255);
+                this.generate(p5);
+                coloringFunction(p5);
+            }
         }
     }
 
-    colorInCells(p5) {
+    colorAnyCell(p5, fillFunc) {
         for (let i = 0; i < this.state.cells.length; i++) {
             for (let j = 0; j < this.state.cells[i].length; j++) {
                 let c = this.state.cells[i][j];
-                
-                if ((/* c.R + c.B +  */c.G) > 0) {
-                    p5.fill(c.R * 255, c.G * 255, c.B * 255)
-                } else {
-                    p5.fill(0)
-                }
+                fillFunc(c);
                 p5.stroke(0);
                 p5.rect(i * this.state.dim, j * this.state.dim, this.state.dim - 1, this.state.dim - 1);
             }
         }
     }
 
+    colorInCells(p5) {
+        this.colorAnyCell(p5, (c) => {
+            p5.fill(c.R / c.steps * 255, c.G / c.steps * 255, c.B / c.steps * 255);
+        })
+    }
+
+    colorInGreen(p5) {
+        this.colorAnyCell(p5, (c) => {
+            if ((/* c.R + c.B +  */c.G) > 0) {
+                p5.fill(c.R / c.steps * 255, c.G / c.steps * 255, c.B / c.steps * 255);
+            } else {
+                p5.fill(0);
+            }
+        })
+    }
+    colorInRed(p5) {
+        this.colorAnyCell(p5, (c) => {
+            if ((c.R) > 0) {
+                p5.fill(c.R * 255, c.G * 255, c.B * 255);
+            } else {
+                p5.fill(0);
+            }
+        })
+    }
+    colorInBlue(p5) {
+        this.colorAnyCell(p5, (c) => {
+            if ((c.B) > 0) {
+                p5.fill(c.R * 255, c.G * 255, c.B * 255);
+            } else {
+                p5.fill(0);
+            }
+        })
+    }
+
     pause() {
         this.setState({ paused: !this.state.paused })
+    }
+
+    toggleGDecay(){
+        this.setState({gDecay:!this.state.gDecay});
+    }
+
+    swapFilter(clickArgs) {
+        var newLabel = this.state.filterName;
+        var newColoringFunction = this.state.coloringFunction;
+        if (this.state.filterName === "All") {
+            newColoringFunction = this.colorInBlue;
+            newLabel = "Blue";
+        } else if (this.state.filterName === "Blue") {
+            newColoringFunction = this.colorInRed;
+            newLabel = "Red";
+        } else if (this.state.filterName === "Red") {
+            newColoringFunction = this.colorInGreen;
+            newLabel = "Green";
+        } else {
+            newColoringFunction = this.colorInCells;
+            newLabel = "All";
+        }
+
+        this.setState({ coloringFunction: newColoringFunction, filterName: newLabel });
     }
 
     /* static getDerivedStateFromProps(props, state) {
@@ -154,15 +264,20 @@ export class Grid extends React.Component {
     style={{ display: 'inline-block', float: 'right' }}
     */
     render() {
-        const { paused } = this.state
+        const { paused, filterName, dim, steps, p5, next, coloringFunction, cells, gDecay} = this.state
         return (
             <div className="Grid">
                 <div className="GridBtns">
                     <button onClick={this.init}>Init</button>
                     <button onClick={this.pause}>{paused ? "unpause" : "pause"}</button>
+                    <button onClick={this.swapFilter}>{filterName}</button>
+                    <button onClick={this.toggleCellSize}>cell size: {dim}</button>
+                    <button onClick={this.toggleSteps}>steps: {steps}</button>
+                    <button onClick={() => this.doDrawing(p5, coloringFunction)}>Increment</button>
+                    <button onClick={this.toggleGDecay}>{gDecay?"G Decays":"G Doesn't Decay"}</button>
                 </div>
 
-                <Canvas init={this.init} dim={this.state.dim} rows={this.state.cells} next={this.state.next} draw={this.draw} />
+                <Canvas init={this.init} dim={dim} rows={cells} next={next} draw={this.draw} />
             </div>
         )
     }
