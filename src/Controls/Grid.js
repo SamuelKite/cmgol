@@ -7,11 +7,16 @@ const Canvas = props => {
     const { init, draw, rows, next, dim, ...rest } = props
 
     let setup = (p5, canvasParentRef) => {
-        let drawTarget = p5.createCanvas(canvasParentRef.offsetWidth, canvasParentRef.offsetWidth).parent(canvasParentRef);
+        let drawTarget = p5.createCanvas(canvasParentRef.parentNode.clientWidth, canvasParentRef.parentNode.clientHeight).parent(canvasParentRef);
         init(p5);
     }
 
-    return <Sketch setup={setup} draw={draw} {...rest} />
+    let windowResized = function(p5, event){
+            p5.resizeCanvas(p5.windowWidth, p5.windowHeight)
+            init(p5);
+    }
+
+    return <Sketch setup={setup} draw={draw} windowResized={windowResized} {...rest} />
 }
 
 export class GridCell {
@@ -98,10 +103,10 @@ export class Grid extends React.Component {
         }
         let rows = Math.floor(p5.height / this.state.dim);
         let cols = Math.floor(p5.width / this.state.dim);
-        let newCells = Array.from(Array(rows), () => new Array(cols));
-        let newNext = Array.from(Array(rows), () => new Array(cols));
-        for (let i = 0; i < rows; i++) {
-            for (let j = 0; j < cols; j++) {
+        let newCells = Array.from(Array(cols), () => new Array(rows));
+        let newNext = Array.from(Array(cols), () => new Array(rows));
+        for (let i = 0; i <cols ; i++) {
+            for (let j = 0; j < rows; j++) {
                 if (i == 0 || j == 0 || i == rows - 1 || j == cols - 1) {
                     newCells[i][j] = new GridCell(0, 0, 0, this.state.steps);
                 }

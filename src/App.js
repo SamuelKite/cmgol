@@ -1,4 +1,3 @@
-import './App.css';
 import { Grid } from './Controls/Grid.js';
 
 function App() {
