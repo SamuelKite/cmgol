@@ -278,11 +278,6 @@ export class Grid extends React.Component {
         this.setState({ coloringFunction: newColoringFunction, filterName: newLabel });
     }
 
-    /* static getDerivedStateFromProps(props, state) {
-        return { ce: props.GridValues };
-    }
-    style={{ display: 'inline-block', float: 'right' }}
-    */
     render() {
         const { paused, filterName, dim, steps, p5, next, coloringFunction, cells, gDecay } = this.state
         return (
@@ -294,7 +289,7 @@ export class Grid extends React.Component {
                     <button onClick={this.toggleCellSize}>cell size: {dim}</button>
                     <button onClick={this.toggleSteps}>steps: {steps}</button>
                     <button onClick={() => this.doDrawing(p5, coloringFunction)}>Increment</button>
-                    <button onClick={this.toggleGDecay}>{gDecay ? "G Decays" : "G Doesn't Decay"}</button>
+                    <button onClick={this.toggleGDecay}>{gDecay ? "G Decays" : "G Remains"}</button>
                 </div>
 
                 <Canvas init={this.init} dim={dim} rows={cells} next={next} draw={this.draw} />
