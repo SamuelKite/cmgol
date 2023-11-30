@@ -33,9 +33,29 @@ export class GridCell {
         }
     }
 
+    ifColorIsLessThanStepsThenAdd (color, amount) {
+        if(color < steps)
+        {
+            this[color] += amount;
+        }
+    }
+
+    tryIncrement(color) {
+
+        if(color === "R" || color === "G" || color === "B") {
+            ifColorIsLessThanStepsThenAdd(color,1);
+        }
+    }
+
     decrement(color) {
         if (this.hasOwnProperty(color) && this[color] > 0) {
             this[color] -= 1;
+        }
+    }
+
+    tryDecrement(color) {
+        if(color === "R" || color === "G" || color === "B") {
+            ifColorIsLessThanStepsThenAdd(color,-1);
         }
     }
 }
@@ -128,18 +148,18 @@ export class Grid extends React.Component {
     evaluateCell(cell)
     {
         if (cell.B > 0 && cell.R > 0) {
-            cell.increment("G");
+            cell.tryIncrement("G");
         } else if (cell.G > 0 &&
             cell.R < cell.G &&
             cell.B < cell.G) {
             if (Math.random() > .5) {
-                cell.increment("B");
+                cell.tryIncrement("B");
             } else {
-                cell.increment("R");
+                cell.tryIncrement("R");
             }
             // Optional Remove Green step
             if (this.state.gDecay === true) {
-                cell.decrement("G");
+                cell.tryDecrement("G");
             }
         }
     }
