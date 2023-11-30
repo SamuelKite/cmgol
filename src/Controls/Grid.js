@@ -52,7 +52,7 @@ export class Grid extends React.Component {
             coloringFunction: this.colorInCells,
             filterName: "All",
             steps: 1,
-            gDecay: true
+            gDecay: true,
         };
 
         this.draw = this.draw.bind(this);
@@ -124,6 +124,26 @@ export class Grid extends React.Component {
         this.doDrawing(p5, this.state.coloringFunction);
     }
 
+    // evaluateCell(GridCell: cell)
+    evaluateCell(cell)
+    {
+        if (cell.B > 0 && cell.R > 0) {
+            cell.increment("G");
+        } else if (cell.G > 0 &&
+            cell.R < cell.G &&
+            cell.B < cell.G) {
+            if (Math.random() > .5) {
+                cell.increment("B");
+            } else {
+                cell.increment("R");
+            }
+            // Optional Remove Green step
+            if (this.state.gDecay === true) {
+                cell.decrement("G");
+            }
+        }
+    }
+
     generate(p5) {
         if (this.state.cells.length > 0) {
             for (let y = 1; y < this.state.cells.length - 1; y++) {
@@ -144,22 +164,7 @@ export class Grid extends React.Component {
                         }
                     }
                     // Conflict step--R+B = G, G=R||B
-
-                    if (cell.B > 0 && cell.R > 0) {
-                        cell.increment("G");
-                    } else if (cell.G > 0 &&
-                        cell.R < cell.G &&
-                        cell.B < cell.G) {
-                        if (Math.random() > .5) {
-                            cell.increment("B");
-                        } else {
-                            cell.increment("R");
-                        }
-                        // Optional Remove Green step
-                        if (this.state.gDecay === true) {
-                            cell.decrement("G");
-                        }
-                    }
+                    evaluateCell(cell);
                     // Game of Life rules
                     let nextCell = this.state.next[y][x];
                     ["R", "G", "B"].forEach(element => {
@@ -171,9 +176,9 @@ export class Grid extends React.Component {
                 }
             }
 
-            let temp = this.state.cells;
+            let current = this.state.cells;
             this.state.cells = this.state.next;
-            this.state.next = temp;
+            this.state.next = current;
         }
     }
 
@@ -214,7 +219,7 @@ export class Grid extends React.Component {
             if ((/* c.R + c.B +  */c.G) > 0) {
                 p5.fill(c.R / c.steps * 255, c.G / c.steps * 255, c.B / c.steps * 255);
             } else {
-                p5.fill(0);
+                p5.fill(c.R-c.G, (c.R+c.B)*.5, c.B-c.G);
             }
         })
     }
