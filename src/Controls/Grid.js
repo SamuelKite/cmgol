@@ -436,7 +436,7 @@ export class Grid extends React.Component {
 
     colorInGreen(p5) {
         this.colorAnyCell(p5, (c) => {
-            if ((/* c.R + c.B +  */c.G) > 0) {
+            if (c.G > 0) {
                 p5.fill(c.R / c.steps * 255, c.G / c.steps * 255, c.B / c.steps * 255);
             } else {
                 p5.fill(c.R-c.G, (c.R+c.B)*.5, c.B-c.G);
