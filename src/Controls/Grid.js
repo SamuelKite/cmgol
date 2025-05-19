@@ -73,6 +73,9 @@ export class Grid extends React.Component {
             filterName: "All",
             steps: 1,
             gDecay: true,
+            zoom: 1.0, // Add zoom state
+            panX: 0,   // Add pan state
+            panY: 0
         };
 
         this.draw = this.draw.bind(this);
@@ -93,9 +96,43 @@ export class Grid extends React.Component {
 
         this.state.coloringFunction = this.state.coloringFunction.bind(this);
 
+        this.handleWheel = this.handleWheel.bind(this);
+        this.zoomIn = this.zoomIn.bind(this);
+        this.zoomOut = this.zoomOut.bind(this);
+        this.handleMouseDown = this.handleMouseDown.bind(this);
+        this.handleMouseMove = this.handleMouseMove.bind(this);
+        this.handleMouseUp = this.handleMouseUp.bind(this);
+        this.handleTouchStart = this.handleTouchStart.bind(this);
+        this.handleTouchMove = this.handleTouchMove.bind(this);
+        this.handleTouchEnd = this.handleTouchEnd.bind(this);
+        this.resetView = this.resetView.bind(this);
     }
 
     componentDidMount() {
+        // Add mouse wheel event listener
+        if (this.containerRef) {
+            this.containerRef.addEventListener('wheel', this.handleWheel, { passive: false });
+            this.containerRef.addEventListener('mousedown', this.handleMouseDown);
+            this.containerRef.addEventListener('mousemove', this.handleMouseMove);
+            this.containerRef.addEventListener('mouseup', this.handleMouseUp);
+            this.containerRef.addEventListener('mouseleave', this.handleMouseUp);
+            this.containerRef.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+            this.containerRef.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+            this.containerRef.addEventListener('touchend', this.handleTouchEnd);
+        }
+    }
+
+    componentWillUnmount() {
+        if (this.containerRef) {
+            this.containerRef.removeEventListener('wheel', this.handleWheel);
+            this.containerRef.removeEventListener('mousedown', this.handleMouseDown);
+            this.containerRef.removeEventListener('mousemove', this.handleMouseMove);
+            this.containerRef.removeEventListener('mouseup', this.handleMouseUp);
+            this.containerRef.removeEventListener('mouseleave', this.handleMouseUp);
+            this.containerRef.removeEventListener('touchstart', this.handleTouchStart);
+            this.containerRef.removeEventListener('touchmove', this.handleTouchMove);
+            this.containerRef.removeEventListener('touchend', this.handleTouchEnd);
+        }
     }
 
     componentDidUpdate(prevProps, prevState, snapshot) {
@@ -211,8 +248,12 @@ export class Grid extends React.Component {
         if (p5) {
             if (this.state.cells?.length > 0) {
                 p5.background(255);
+                p5.push();
+                p5.translate(this.state.panX, this.state.panY); // Apply pan
+                p5.scale(this.state.zoom); // Apply zoom
                 this.generate(p5);
                 coloringFunction(p5);
+                p5.pop();
             }
         }
     }
@@ -279,34 +320,169 @@ export class Grid extends React.Component {
         this.setState({ gDecay: !this.state.gDecay });
     }
 
-    swapFilter(clickArgs) {
-        var newLabel = this.state.filterName;
-        var newColoringFunction = this.state.coloringFunction;
-        if (this.state.filterName === "All") {
-            newColoringFunction = this.colorInBlue;
-            newLabel = "Blue";
-        } else if (this.state.filterName === "Blue") {
-            newColoringFunction = this.colorInRed;
-            newLabel = "Red";
-        } else if (this.state.filterName === "Red") {
-            newColoringFunction = this.colorInGreen;
-            newLabel = "Green";
-        } else if (this.state.filterName === "Green") {
-            newColoringFunction = this.colorInWhite;
-            newLabel = "Gray";
-        }
-        else {
-            newColoringFunction = this.colorInCells;
-            newLabel = "All";
-        }
+    handleWheel(e) {
+        e.preventDefault();
+        const { zoom, panX, panY } = this.state;
+        const rect = this.containerRef.getBoundingClientRect();
+        // Mouse position relative to container
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        // Convert to world coordinates
+        const wx = (mouseX - panX) / zoom;
+        const wy = (mouseY - panY) / zoom;
+        // Zoom in/out
+        const delta = e.deltaY < 0 ? 0.1 : -0.1;
+        let newZoom = Math.min(Math.max(zoom + delta, 0.2), 4.0);
+        // Adjust pan so that wx/wy stays under mouse
+        let newPanX = mouseX - wx * newZoom;
+        let newPanY = mouseY - wy * newZoom;
+        this.setState({ zoom: newZoom, panX: newPanX, panY: newPanY });
+    }
 
-        this.setState({ coloringFunction: newColoringFunction, filterName: newLabel });
+    zoomIn() {
+        this.zoomAtCenter(0.1);
+    }
+
+    zoomOut() {
+        this.zoomAtCenter(-0.1);
+    }
+
+    zoomAtCenter(delta) {
+        const { zoom, panX, panY } = this.state;
+        const rect = this.containerRef.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const wx = (centerX - panX) / zoom;
+        const wy = (centerY - panY) / zoom;
+        let newZoom = Math.min(Math.max(zoom + delta, 0.2), 4.0);
+        let newPanX = centerX - wx * newZoom;
+        let newPanY = centerY - wy * newZoom;
+        this.setState({ zoom: newZoom, panX: newPanX, panY: newPanY });
+    }
+
+    resetView() {
+        this.setState({ zoom: 1.0, panX: 0, panY: 0 });
+    }
+
+    handleMouseDown(e) {
+        if (e.button !== 0) return;
+        this.isPanning = true;
+        this.lastPan = { x: e.clientX, y: e.clientY };
+    }
+
+    handleMouseMove(e) {
+        if (!this.isPanning) return;
+        const dx = e.clientX - this.lastPan.x;
+        const dy = e.clientY - this.lastPan.y;
+        this.setState(state => ({ panX: state.panX + dx, panY: state.panY + dy }));
+        this.lastPan = { x: e.clientX, y: e.clientY };
+    }
+
+    handleMouseUp(e) {
+        this.isPanning = false;
+    }
+
+    handleTouchStart(e) {
+        if (e.touches.length === 1) {
+            this.isPanning = true;
+            this.lastPan = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+    }
+
+    handleTouchMove(e) {
+        if (!this.isPanning || e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - this.lastPan.x;
+        const dy = e.touches[0].clientY - this.lastPan.y;
+        this.setState(state => ({ panX: state.panX + dx, panY: state.panY + dy }));
+        this.lastPan = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        e.preventDefault();
+    }
+
+    handleTouchEnd(e) {
+        this.isPanning = false;
+    }
+
+    // ...existing code...
+    doDrawing(p5, coloringFunction) {
+        if (p5) {
+            if (this.state.cells?.length > 0) {
+                p5.background(255);
+                p5.push();
+                p5.translate(this.state.panX, this.state.panY); // Apply pan
+                p5.scale(this.state.zoom); // Apply zoom
+                this.generate(p5);
+                coloringFunction(p5);
+                p5.pop();
+            }
+        }
+    }
+
+    colorAnyCell(p5, fillFunc) {
+        for (let i = 0; i < this.state.cells.length; i++) {
+            for (let j = 0; j < this.state.cells[i].length; j++) {
+                let c = this.state.cells[i][j];
+                fillFunc(c);
+                p5.stroke(0);
+                p5.rect(i * this.state.dim, j * this.state.dim, this.state.dim - 1, this.state.dim - 1);
+            }
+        }
+    }
+
+    colorInCells(p5) {
+        this.colorAnyCell(p5, (c) => {
+            p5.fill(c.R / c.steps * 255, c.G / c.steps * 255, c.B / c.steps * 255);
+        })
+    }
+
+    colorInGreen(p5) {
+        this.colorAnyCell(p5, (c) => {
+            if (c.G > 0) {
+                p5.fill(c.R / c.steps * 255, c.G / c.steps * 255, c.B / c.steps * 255);
+            } else {
+                p5.fill(c.R-c.G, (c.R+c.B)*.5, c.B-c.G);
+            }
+        })
+    }
+    colorInRed(p5) {
+        this.colorAnyCell(p5, (c) => {
+            if ((c.R) > 0) {
+                p5.fill(c.R * 255, c.G * 255, c.B * 255);
+            } else {
+                p5.fill(0);
+            }
+        })
+    }
+    colorInBlue(p5) {
+        this.colorAnyCell(p5, (c) => {
+            if ((c.B) > 0) {
+                p5.fill(c.R * 255, c.G * 255, c.B * 255);
+            } else {
+                p5.fill(0);
+            }
+        })
+    }
+    colorInWhite(p5) {
+        this.colorAnyCell(p5, (c) => {
+            if (Math.abs(c.R - c.G) < 2 && c.R == c.B && c.R !== 0) {
+                p5.fill(c.R * 255, c.G * 255, c.B * 255);
+            } else {
+                p5.fill(0);
+            }
+        });
+    }
+
+    pause() {
+        this.setState({ paused: !this.state.paused })
+    }
+
+    toggleGDecay() {
+        this.setState({ gDecay: !this.state.gDecay });
     }
 
     render() {
-        const { paused, filterName, dim, steps, p5, next, coloringFunction, cells, gDecay } = this.state
+        const { paused, filterName, dim, steps, p5, next, coloringFunction, cells, gDecay, zoom } = this.state
         return (
-            <div className="Grid">
+            <div className="Grid" ref={ref => (this.containerRef = ref)}>
                 <div className="GridBtns">
                     <button onClick={this.init}>Init</button>
                     <button onClick={this.pause}>{paused ? "unpause" : "pause"}</button>
@@ -315,6 +491,10 @@ export class Grid extends React.Component {
                     <button onClick={this.toggleSteps}>steps: {steps}</button>
                     <button onClick={() => this.doDrawing(p5, coloringFunction)}>Increment</button>
                     <button onClick={this.toggleGDecay}>{gDecay ? "G Decays" : "G Remains"}</button>
+                    <button onClick={this.zoomIn}>Zoom In</button>
+                    <button onClick={this.zoomOut}>Zoom Out</button>
+                    <button onClick={this.resetView}>Reset View</button>
+                    <span style={{marginLeft: '10px'}}>Zoom: {zoom.toFixed(2)}x</span>
                 </div>
 
                 <Canvas init={this.init} dim={dim} rows={cells} next={next} draw={this.draw} />
